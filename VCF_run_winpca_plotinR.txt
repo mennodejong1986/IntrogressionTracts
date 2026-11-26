@@ -1,0 +1,489 @@
+# 15-05-2026:
+# Script to create genotype plots based on WINPCA output.
+# Depends on R package adegenet (to build genlight object and glplot)
+
+roedeerdata<-function()
+	{
+	# Store all files ending on 'pc_1.tsv' (winpca output) in one directory.
+	setwd("C:/Users/Menno_de_Jong/Documents/SNPdatasets/Roe71_auto/winpca")
+	source("E:/PhD/General/Rawdata2snps/VCF_run_winpca_plotinR.txt")
+	library("adegenet")
+	# 
+	runall(loaddata=TRUE,pmiss=0.25,doplot=FALSE,myref1=c("Spain1","Spain2","Portugal1","Portugal2"),myref2=c("Primorsky1","Primorsky2","Primorsky3"))
+	mysampleorder<-c("Portugal1","Portugal2","Spain1","Spain2","Scotland1","Scotland2","Scotland3","Scotland4","Sweden1","Sweden2","Sweden3","Finland1","Finland2","Finland3","Netherlands1","Netherlands2","Germany1","Germany2","Germany3","Germany4","Germany5","Italy3","Italy2","Italy1","Serbia1","Serbia2","Slovakia1","Slovakia2","Hungary1","Hungary2","Hungary3","Greece1","Greece2","Caucasus3","Poland1","Poland2","Poland3","Poland4","Poland5","Ukraine1","Ukraine2","Ukraine3","Moscow2","Moscow3","Wolvograd3","Wolvograd4","Wolvograd1","Wolvograd2","Moscow1","Caucasus1","Caucasus2","Kazachstan1","Kazachstan2","Ural1","Ural2","Ural3","Ural4","Ural5","Altai1","Altai2","Altai3","Altai4","Yakutia1","Yakutia2","Yakutia3","Primorsky1","Primorsky2","Primorsky3")
+	runall(loaddata=FALSE,pmiss=0.25,do_impute=TRUE,doplot=TRUE,sampleorder=mysampleorder,exporttype="png",addcolour=TRUE)
+	#
+	# Check individual samples:
+	checksample(my_sample="Sweden2",my_bed="xchrom.txt")
+	#
+	# INTROGRESSION TRACT LENGTHS:
+	tractlengths(pmiss=0.25)
+	tractbarplot(indorder=mysampleorder,plotname="TractAB_barplot",inputdf=tract1mat,export="pdf",mywidth=0.2,ymax=60,yline=3.5,ylabel="# AB introgression tracts")		# heterozygous
+	tractbarplot(indorder=mysampleorder,plotname="TractBB_barplot",inputdf=tract2mat,export="pdf",mywidth=0.2,ymax=60,yline=3.5,ylabel="# BB introgression tracts")		# homozygous
+	#
+	# histogram:
+	myhybrids	<- c("China1","Moscow2","Moscow3","Ukraine3","Wolvograd1","Wolvograd2","Wolvograd3","Wolvograd4")
+	mysiberian	<- c("Ural1","Ural2","Ural3","Ural4","Ural5","Yakutia1")
+	pdf("Tractlengths_histogram.pdf")
+	hist(tractdf$length[tractdf$name%in%myhybrids],breaks=mybreaks,xlim=c(0,40),col="grey",border="grey",main="",las=1,xlab="",ylab="",cex.axis=1.5)
+	hist(tractdf$length[!tractdf$name%in%c(mysiberian,myhybrids)],breaks=mybreaks,col="darkred",border="darkred",add=TRUE)
+	hist(tractdf$length[tractdf$name%in%mysiberian],breaks=mybreaks,col="darkgreen",border="darkgreen",add=TRUE)
+	mtext(side=1,"Introgression tract length (Mb)",cex=1.75,line=2.5)
+	mtext(side=2,"Number of tracts",cex=1.75,line=2.5)
+	legend("topright",c("European","Hybrids","Siberian"),fill=c("darkred","grey","darkgreen"),bty="n",cex=1.75)
+	dev.off()
+	#
+	# Plot per chromosome:
+	myhybrids			<- c("China1","Moscow2","Moscow3","Ukraine3","Wolvograd1","Wolvograd2","Wolvograd3","Wolvograd4")
+	tempdf				<- tractdf[!tractdf$name%in%myhybrids,]
+	chrlength			<- aggregate(pos ~ chrvec, data = alldf, max)
+	ntracts				<- aggregate(length ~ chr, data = tempdf, length)
+	tractlength			<- aggregate(length ~ chr, data = tempdf, sum)
+	#barplot(100*tractlength$length/chrlength$pos,ylab="Mean nroportion introgressed DNA (%)",xlab="Chromosome")
+	colvec				<- ifelse(chrlength$chr=="xchrom.txt","red","grey50")
+	pdf("Tracts_per_chrom.pdf")
+	plot(tractlength$length,ntracts$length,xlab="Combined tract length (Mb)",ylab="Combined number of tracts",col=colvec,pch=16,cex=2)
+	legend("bottomright",legend=c("autosomes","X chromosome"),fill=c("grey50","red"),bty="n",cex=1.5)
+	dev.off()
+	#
+	#
+	# plot introgressed mtDNA in SambaR:
+	mtdnavec	<-	c("Hungary2","Poland1","Poland3","Poland5","Ukraine1","Hungary1","Hungary3","Slovakia1")
+	setwd("C:/Users/Menno_de_Jong/Documents/SNPdatasets/Roe71_auto")
+	source("E:/PhD/General/SAMBAR/SAMBAR_v1.10.txt")
+	excludepop(c("Moose","Waterdeer"))
+	excludeind("China1")
+	add2inds("Winpca_introgression_proportions.txt")
+	indsbarplot(doexport=TRUE,myscore="intro_all",plotname="Introgression",ylabel="Introgressed DNA (%)",yline=5.5,silent=TRUE,mywidth=0.25,cex_axis=1,ymax=1.5,minvalue=0,dolog=TRUE,mark_inds=mtdnavec)
+	indsbarplot(doexport=TRUE,myscore="intro_all",plotname="Introgression",ylabel="Introgressed DNA (%)",yline=5.5,silent=TRUE,mywidth=0.25,cex_axis=1,ymax=NULL,minvalue=0,dolog=FALSE,mark_inds=mtdnavec)
+	indsbarplot(doexport=TRUE,myscore="intro_all",plotname="Introgression",ylabel="Introgressed DNA (%)",yline=5.5,silent=TRUE,mywidth=0.25,cex_axis=1,ymax=4,minvalue=0,dolog=FALSE,mark_inds=mtdnavec,myheight=2)
+	indsbarplot(doexport=TRUE,myscore="intro_all",plotname="Introgression",ylabel="Introgressed DNA (%)",yline=4,silent=TRUE,mywidth=0.2,cex_axis=1,ymax=2.5,minvalue=0,dolog=FALSE,mark_inds=mtdnavec,myheight=7.25)
+	}
+
+checksample<-function(myprefix="Roe_",my_sample="Poland1",pmiss=0.25,my_bed="mybed24.txt",ref1vec=c("Spain1","Spain2","Portugal1","Portugal2"),ref2vec=c("Primorsky1","Primorsky2","Primorsky3"))
+	{
+	genodf		<- alldf[alldf$chrvec==my_bed,c(3:ncol(alldf))]
+	mypos		<- alldf$pos[alldf$chrvec==my_bed]
+	#
+	nind		<- ncol(genodf)
+	nmiss		<- rowSums(is.na(genodf))
+	nabool		<- nmiss>(pmiss*nind)		# which windows have more than 50% missing data? 
+	genodf		<- genodf[!nabool,]
+	mypos		<- mypos[!nabool]
+	#
+	myvector	<- genodf[,colnames(genodf)==my_sample]
+	#mypos		<<- mypos[!is.na(myvector)]
+	mypos		<<- mypos
+	#myvector	<- myvector[!is.na(myvector)]
+	myvector	<<- myvector
+	table(myvector)
+	head(myvector)
+	mypos[myvector%in%c(1,2)]
+	findtracts(myprefix=my_prefix,mybedfile=my_bed,mysample=my_sample,ref1=ref1vec,ref2=ref2vec)
+	}
+
+runall<-function(my_prefix="Roe_",loaddata=TRUE,doplot=FALSE,exporttype="pdf",mycols=c("darkred","orange","darkgreen"),pmiss=0.25,do_impute=FALSE,myref1="Spain1",myref2="Primorsky1",sampleorder=NULL,mythresholds=c(0.35,0.65),dosummary=FALSE,addcolour=FALSE,doreverse=FALSE)
+	{
+	myfiles	<- list.files(path = "./", pattern = "\\.tsv\\.gz$")
+	nfiles	<- length(myfiles)
+	if(loaddata)
+		{
+		dflist 	<- vector("list",nfiles)
+		for(filenr in c(1:nfiles))
+			{
+			myfile		<- myfiles[filenr]
+			myfile		<- sub(my_prefix,"",myfile)
+			bedfile		<- sub(".pc_1.tsv.gz$","",myfile)
+			#myfile		<- sub("^(([^.]*\\.){1}[^.]*)\\..*", "\\1",myfile)
+			#bedfile		<- sub("^[^_]*_", "",myfile)
+			cat(bedfile,sep="\n")
+			findtracts(myprefix=my_prefix,mybedfile=bedfile,ref1=myref1,ref2=myref2,thresholds=mythresholds)
+			dflist[[filenr]]	<- outdf 		
+			}
+		alldf 	<<- do.call(rbind,dflist)
+		}
+	if(doplot)
+		{
+		# remove sites with too much missing data (to avoid distracting white stripes):
+		genodf	<- alldf[,c(3:ncol(alldf))]
+		nind	<- ncol(genodf)
+		nmiss	<- rowSums(is.na(genodf))
+		nabool	<- nmiss>(pmiss*nind)		# which windows have more than 50% missing data? 
+		genodf	<- genodf[!nabool,]
+		nind	<- ncol(genodf)
+		#
+		if(do_impute)
+			{
+			# replace single missing data points with AA genotypes (to avoid distracting white points):
+			for(i in c(1:nind))
+				{
+				indgeno	<- genodf[,i]
+				n0		<- length(indgeno[indgeno==0])
+				n2		<- length(indgeno[indgeno==2])
+				if(n0>n2)
+					{
+					indgeno[is.na(indgeno)]	<- 0 
+					}else{
+					indgeno[is.na(indgeno)]	<- 2 
+					}
+				genodf[,i]<- indgeno
+				}
+			}
+		# reorder:
+		myorder	<- c("Portugal1","Portugal2","Spain1","Spain2","Scotland1","Scotland2","Scotland3","Scotland4","Sweden1","Sweden2","Sweden3","Finland1","Finland2","Finland3","Netherlands1","Netherlands2","Germany1","Germany2","Germany3","Germany4","Germany5","Italy1","Italy2","Italy3","Serbia1","Serbia2","Slovakia1","Slovakia2","Ukraine1","Ukraine2","Hungary1","Hungary2","Hungary3","Greece1","Greece2","Caucasus3","Poland1","Poland2","Poland3","Poland4","Poland5","Moscow2","Ukraine3","Moscow3","Wolvograd3","Wolvograd4","Wolvograd1","Wolvograd2","Caucasus1","Caucasus2","Moscow1","Kazachstan1","Kazachstan2","Ural1","Ural2","Ural3","Ural4","Ural5","Altai1","Altai2","Altai3","Altai4","Yakutia1","Yakutia2","Yakutia3","Primorsky1","Primorsky2","Primorsky3")
+		if(!is.null(sampleorder))
+			{
+			genodf 	<- genodf[,sampleorder]
+			}
+		library("adegenet")
+		mygl	<- as.genlight(as.matrix(t(genodf)))
+		if(exporttype=="pdf"){pdf("Genotracts_winpca.pdf",height=10,width=20)}
+		if(exporttype=="pdf"){svg("Genotracts_winpca.svg",height=10,width=20)}
+		par(mar=c(5,5,3,6))
+		if(exporttype=="png")
+			{
+			png("Genotracts_winpca.png",height=5000,width=20000)
+			par(mar=c(40,30,24,60))
+			}
+		if(doreverse)
+			{
+			plotmat	<- as.matrix(mygl)
+			plotmat	<- plotmat[,c(ncol(plotmat):1)]
+			plotgl	<- as.genlight(plotmat)
+			}else{
+			plotgl	<- mygl
+			}
+		glPlot(plotgl,col=mycols,legend=FALSE,yaxt='n',axes=FALSE)
+		#axis(side=4,at=seq(1,nind,1),label=rev(colnames(genodf)),cex.axis=0.5,las=1)
+		labelvec	<- colnames(genodf)
+		if(addcolour)
+			{
+			if(exists("inds"))
+				{
+				cat("To add colours, first create inds dataframe using SambaR.",sep="\n")
+				}else{
+				colourvec	<- rep(NA,nind)
+				for(i in c(1:nind))
+					{
+					colourvec[i]	<- inds$popcol[inds$name==labelvec[i]]
+					}
+				}
+			}else{
+			colourvec	<- rep("black",nind)
+			}
+		if(exporttype=="png")
+			{
+			for(k in c(1:150))
+				{
+				text(x=nrow(genodf)+50+k,y=seq(1,nind,1),labels=rep("|",nind),col=rev(colourvec),xpd=TRUE,adj=0,cex=5)
+				}
+			}else{
+			text(x=nrow(genodf)+50,y=seq(1,nind,1),labels=rev(labelvec),col=rep(colourvec),xpd=TRUE,adj=0,cex=0.75)
+			}
+		# add chromosome boundaries:
+		chrvec		<- alldf$chrvec[!nabool]
+		indexvec	<- which(chrvec[-1]!=chrvec[-length(chrvec)])+1
+		if(exporttype=="png")
+			{
+			abline(v=indexvec,col="grey50",lty=2,lwd=10)
+			}else{
+			abline(v=indexvec,col="grey50",lty=3,lwd=0.5)
+			}
+		dev.off()
+		}
+	if(dosummary)
+		{
+		genodf	<- alldf[,c(3:ncol(alldf))]
+		nind	<- ncol(genodf)
+		nmiss	<- rowSums(is.na(genodf))
+		nabool	<- nmiss>(pmiss*nind)		# which windows have more than 50% missing data? 
+		genodf	<- genodf[!nabool,]
+		introdf	<- as.data.frame(t(apply(genodf,2,function(x) table(factor(x, levels = c(0,1,2))))))
+		colnames(introdf)	<- c("AA","AB","BB")
+		introdf$name		<- rownames(introdf)
+		introdf				<- introdf[,c("name","AA","AB","BB")]
+		introdf$all			<- introdf$AA+introdf$AB+introdf$BB
+		introdf$intro_hetero<- introdf$AB/introdf$all
+		introdf$intro_homo	<- ifelse(introdf$AA<introdf$BB,introdf$AA/introdf$all,introdf$BB/introdf$all)
+		introdf$intro_all	<- 0.5*(introdf$intro_hetero+introdf$intro_homo)*100 # in percentages
+		write.table(introdf,"Winpca_introgression_proportions.txt",col.names=TRUE,row.names=FALSE,quote=FALSE,sep="\t")
+		}
+	}
+
+tractlengths<-function(pmiss=0.25)
+	{
+	genodf				<- alldf[,c(3:ncol(alldf))]
+	indvec				<- colnames(genodf)
+	nind				<- length(indvec)
+	nmiss				<- rowSums(is.na(genodf))
+	nabool				<- nmiss>(pmiss*nind)		# which windows have more than 50% missing data? 
+	genodf				<- genodf[!nabool,]
+	mychroms			<- alldf$chrvec[!nabool]
+	chrvec				<- unique(mychroms)
+	nchr				<- length(chrvec)
+	#
+	introdf				<- as.data.frame(t(apply(genodf,2,function(x) table(factor(x, levels = c(0,1,2))))))
+	colnames(introdf)	<- c("AA","AB","BB")
+	introdf$name		<- rownames(introdf)
+	introdf				<- introdf[,c("name","AA","AB","BB")]
+	introdf$dominant	<- ifelse(introdf$AA>introdf$BB,0,2)
+	#tractdf			<- data.frame("name"=indvec,"geno"=rep(3,nind),"length"=rep(0,nind))
+	tractdf				<- data.frame("name"=NA,"chr"=NA,"geno"=NA,"length"=NA)
+	#
+	for(i in c(1:nind))
+		{
+		myind			<- introdf$name[i]
+		cat(myind,sep="\n")
+		AAgeno			<- introdf$dominant[i]
+		inddf			<- data.frame("name"=NA,"chr"=NA,"geno"=NA,"length"=NA)
+		for(k in c(1:nchr))
+			{
+			mychr		<- chrvec[k]
+			genovec		<- genodf[mychroms==mychr,colnames(genodf)==myind]
+			genovec[is.na(genovec)]	<- AAgeno
+			r 			<- rle(genovec)
+			nrle		<- length(r$length)
+			chrdf		<- data.frame("name"=rep(myind,nrle),"chr"=rep(mychr,nrle),"geno"=r$values,"length"=r$length)
+			chrdf		<- chrdf[chrdf$geno!=AAgeno,]
+			if(nrow(chrdf)>0)
+				{
+				inddf	<- rbind(inddf,chrdf)
+				}
+			}
+		# combine with overall dataframe:
+		inddf			<- inddf[2:nrow(inddf),]
+		if(nrow(inddf)>0)
+			{
+			tractdf		<- rbind(tractdf,inddf)
+			}
+		}
+	tractdf			<- tractdf[!is.na(tractdf$geno),]
+	tractdf$geno[tractdf$geno==0]	<- 2
+	tractdf$length	<- tractdf$length/10	# in Mb
+	tractdf			<<- tractdf
+	#
+	# BINNING:
+	cat(" ",sep="\n")
+	cat("Binning...",sep="\n")
+	for(tracttype in c(1,2))
+		{
+		cat(" ",sep="\n")
+		mybreaks			<- c(0,0.2,0.5,1.0,2.0,5.0,10,200.0)
+		minlengths			<- mybreaks[-length(mybreaks)]
+		mylabels			<- c("0-0.2","0.2-0.5","0.5-1","1-2","2-5","5-10",">10")
+		nbins				<- length(minlengths)
+		binmat				<- matrix(NA,nrow=nind,ncol=nbins)
+		rownames(binmat)	<- indvec
+		colnames(binmat)	<- paste("X",minlengths,sep="_")
+		for(j in c(1:nind))
+			{
+			myind				<- indvec[j]
+			if(!silent){cat(myind,sep="\n")}
+			indtracts			<- tractdf$length[tractdf$name==myind&tractdf$geno==tracttype]
+			#
+			# bins:
+			extravec			<- c(0.1,0.25,0.75,1.5,2.5,7.5,15)
+			indtracts			<- c(indtracts,extravec)										# add one observation per category, so all categories are represented at least once (later subtracted)
+			tractbins			<- cut(indtracts,mybreaks)
+			#
+			ntractbin			<- aggregate(indtracts,by=list(tractbins),FUN=length) 
+			colnames(ntractbin)	<- c("size","ntracts")
+			ntractbin$ntracts	<- ntractbin$ntracts-1											# subtract the observations we added a few lines above
+			binmat[j,]			<- ntractbin$ntracts
+			}
+		if(tracttype==1)
+			{
+			tract1mat			<<- binmat
+			}else{
+			tract2mat			<<- binmat
+			}
+		}
+	}
+
+# expects input generated by tractlengths function (tract1mat or tract2mat)
+tractbarplot<-function(inputdf=tract1mat,ylabel="# Introgression tracts",indorder=NULL,mycolours=NULL,plotname="TractAB_barplot",export=NULL,mybg="white",axiscol="black",yline=5,mywidth=0.75,legendcex=1.5,legendpos="topleft",addlegend=TRUE,legx=NULL,legy=NULL,mycex=1,ypopcol=NULL,ymax=NULL)
+	{
+	if(is.null(mycolours))
+		{
+		#mycolours	<- c("grey90","grey70","grey50","steelblue3","mediumpurple1","darkorchid4","midnightblue")
+		mycolours	<- c("grey90","grey70","grey50","yellowgreen","limegreen","darkgreen","darkred")
+		}
+	mydf	<- inputdf
+	myinds	<- rownames(mydf)
+	ninds	<- length(myinds)
+	mymat	<- t(as.matrix(mydf))
+	if(is.null(ymax))
+		{
+		if(!is.null(ypopcol))
+			{
+			ymax	<- max(colSums(mymat),na.rm=TRUE)*1.05		
+			}else{
+			ymax	<- max(colSums(mymat),na.rm=TRUE)
+			}
+		}
+	# reorder:
+	if(!is.null(indorder))
+		{
+		mymat	<- mymat[,indorder]
+		myinds	<- colnames(mymat)
+		}
+	if(!is.null(export))
+		{
+		plotname	<- ifelse(mybg=="white",plotname,paste(plotname,mybg,sep="."))
+		if(export=="eps"){postscript(paste(plotname,"eps",sep="."),width=ninds*mywidth,height=8)}
+		if(export=="pdf"){pdf(paste(plotname,"pdf",sep="."),width=ninds*mywidth,height=8)}
+		if(export=="png"){png(paste(plotname,"png",sep="."),width=ninds*mywidth*100,height=900)}
+		if(export=="wmf"){win.metafile(paste(plotname,"wmf",sep="."),width=ninds*mywidth,height=8)}
+		}
+	par(oma=c(13,8,1,1),mar=c(5,0.5,0.5,0.5),cex.axis=2,bg=mybg,col=axiscol,col.axis=axiscol,col.lab=axiscol,col.main=axiscol)
+	mybarplot	<- barplot(mymat,las=2,col=mycolours,border=NA,names.arg=myinds,las=2,cex.names=mycex,ylim=c(0,ymax))
+	#
+	if(!is.null(ypopcol))
+		{
+		mybarplot2	<- mybarplot[1:ninds]
+		mypops		<- unique(as.character(ind$pop))
+		for (mypop in mypops)
+			{
+			popindex	<- which(as.character(ind$pop)==mypop)
+			npopind		<- length(popindex)
+			popcol		<- as.character(ind$popcol[popindex][1])
+			points(x=mybarplot2[popindex],y=rep(ypopcol,npopind),cex=2.5,col=popcol,pch=15)
+			}
+		}
+	mtext(side=2,ylabel,line=yline,cex=2.25,outer=TRUE,las=0)
+	if(addlegend)
+		{
+		mylegend	<- dwd$rohbinlabels
+		if(is.null(legx)|is.null(legy))
+			{
+			legend(legendpos,legend=rev(mylegend),fill=rev(mycolours),bty='n',cex=legendcex,title="Tract length (Mb):",y.intersp=0.75)
+			}else{
+			legend(x=legx,y=legy,legend=rev(mylegend),fill=rev(mycolours),bty='n',cex=legendcex,title="Tract length (Mb):",y.intersp=0.75)
+			}
+		#legend(legendpos,legend=rev(mylegend),fill=rev(mycolours),bty='n',cex=legendcex)
+		}
+	if(!is.null(export))
+		{
+		dev.off()
+		cat("Stacked ROH barplot with ROH-score per bin per sample has been exported to the directory:",sep="\n")
+		cat(getwd(),sep="\n")
+		}
+	cat("TIP: you might want to use the mywidth flag to adjust the width of the graph. The default (which works for 100ish samples), is 0.75. But if you have only a few samples, set mywidth to a higher value.",sep="\n")
+	}
+
+replace_standalone<-function(x,value)
+	{
+	indexvec	<- which(x==value)
+	isolated	<- !((indexvec-1)%in%indexvec)&!((indexvec+1)%in%indexvec)
+	# above command also counts genotypes as isolated which are surrounded by NA-values.
+	if(any(isolated))
+		{
+		indexvec2	<- indexvec[isolated]
+		for(myindex in indexvec2)
+			{
+			if(myindex>1)
+				{
+				x[myindex] 	<- x[myindex-1]
+				}else{
+				x[myindex] 	<- x[myindex+1]
+				}
+			}
+		}
+	return(x)
+	}
+
+# This is the main function, which assigns genotypes based on pc1-loadings.
+# The user can either provide one or multiple reference samples for either cluster.
+# This function can also be used for plotting/validation purposes only.
+# In that case, specify a sample name to 'mysample' flag.
+findtracts<-function(myprefix="Roe_",mybedfile="mybed5.txt",ref1="Spain1",ref2="Primorsky1",mysample=NULL,thresholds=c(0.35,0.65))
+	{
+	## READ WINPCA DATA:
+	filename	<- paste(myprefix,mybedfile,".pc_1.tsv.gz",sep="")
+	x 			<- read.table(gzfile(filename),header=TRUE,sep="\t")
+	pos			<- x$pos
+	x			<- x[,-1]
+	nwindow		<- nrow(x)
+	nind		<- ncol(x)
+	#
+	# DEFINE THRESHOLDS TO DISTINGUISH AA, AB AND BB:
+	# pca-loadings of reference samples
+	p1				<- rowMeans(x[,names(x)%in%ref1,drop=FALSE],na.rm=TRUE)
+	p2				<- rowMeans(x[,names(x)%in%ref2,drop=FALSE],na.rm=TRUE)
+	p1[is.nan(p1)]	<- NA
+	p2[is.nan(p2)]	<- NA
+	#
+	# mask regions with shallow differentiation ('wespentailles'):
+	diffvec			<- abs(p1-p2)
+	meandiff		<- mean(diffvec,na.rm=TRUE)
+	diffboolvec		<- diffvec>(0.5*meandiff)
+	#
+	# thresholds:
+	q1 		<- p1+thresholds[1]*(p2-p1)
+	q2 		<- p1+thresholds[2]*(p2-p1)
+	if(!is.null(mysample))
+		{
+		plot(pos,p1,ylim=c(-100,100),col="red")
+		points(pos,p2,ylim=c(-100,100),col="blue")
+		points(pos,q1,ylim=c(-100,100),col="orange")
+		points(pos,q2,ylim=c(-100,100),col="orange")
+		#
+		myloadings	<- x[,colnames(x)==mysample] 
+		points(pos,myloadings,col="black")
+		return(cat("WARNING: not assigning genotypes. Only plotting.",sep="\n"))
+		}
+	#	
+	# ASSIGN GENOTYPES:
+	cat("Assigning genotypes...",sep="\n")
+	outmat	<- matrix(NA,nrow=nwindow,ncol=nind)
+	colnames(outmat)	<- colnames(x)
+	for(i in c(1:nwindow))
+		{
+		q_1				<- q1[i]
+		q_2				<- q2[i]
+		k				<- x[i,]
+		diffbool		<- diffboolvec[i]
+		k2				<- rep(NA,nind)
+		if(!is.na(q_1)&!is.na(q_2)&diffbool)
+			{
+			if(q_1<q_2)
+				{
+				q_1				<- q2[i]
+				q_2				<- q1[i]
+				k2[k>=q_1]		<- 2
+				k2[k<=q_2]		<- 0
+				k2[k<q_1&k>q_2]	<- 1
+				}else{
+				k2[k>=q_1]		<- 0
+				k2[k<=q_2]		<- 2
+				k2[k<q_1&k>q_2]	<- 1
+				}
+			outmat[i,]			<- k2
+			}
+		}
+	# REPLACE STAND-ALONE GENOTYPES
+	# a genotype (0, 1 or 2) not directly preceded or followed by the same genotype, is likely a false call
+	# This false calls are unavoidable because the thresholds to define heterozygotes (0.3-0.7) are arbitrary and pc-loadings vary stochastically, partly depending on amount of missing data (sometimes there is an 'indent')
+	# we replace these false calls with the previous genotype 
+	cat("Replacing stand-alone genotypes...",sep="\n")
+	for(mygeno in c(0,1,2))
+		{
+		for(j in c(1:nind))
+			{
+			mycolumn	<-	outmat[,j] 
+			outmat[,j]	<- 	replace_standalone(x=mycolumn,value=mygeno)
+			}
+		}
+	#
+	# WRITE OUT DATA:
+	outdf	<- as.data.frame(outmat)
+	chrvec	<- rep(mybedfile,nwindow)
+	outdf	<- cbind(chrvec,pos,outdf)
+	outdf	<<- outdf
+	outname	<- paste("GenoTracts",mybedfile,"txt",sep=".")
+	write.table(outdf,outname,row.names=FALSE,col.names=TRUE,quote=FALSE,sep="\t")
+	cat("Data has been exported to the directory:",sep="\n")
+	cat(getwd(),sep="\n")
+	}
+	
+	
